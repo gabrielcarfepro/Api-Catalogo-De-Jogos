@@ -1,7 +1,11 @@
+using ApiCatalogoJogos.InputModel;
+using ApiCatalogoJogos.Services;
+using ApiCatalogoJogos.ViewModel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,41 +16,102 @@ namespace ApiCatalogoJogos.Controller.V1
     public class JogosController : ControllerBase
     {
         // GET, POST, PUT, PATCH, DELETE
+
+        private readonly IJogoService _jogoService;
+
+        public JogosController(IJogoService jogoService)
+        {
+            _jogoService = jogoService;
+        }
         
         [HttpGet]
-        public async Task<ActionResult<List<object>>> Obter()
+        public async Task<ActionResult<IEnumerable<JogoViewModel>>> Obter([FromQuery, Range(1, int.MaxValue)] int pagina = 1, [FromQuery, Range(1, 50)] int quantidade = 5)
         {
-            return Ok();
+            var jogos = await _jogoService.Obter(pagina, quantidade);
+
+            if (jogos.Count() == 0)
+                return NoContent();
+
+            return Ok(jogos);
         }
 
         [HttpGet("{idJogo:guid}")]
-        public async Task<ActionResult<object>> Obter(Guid idJogo)
+        public async Task<ActionResult<JogoViewModel>> Obter([FromRoute] Guid idJogo)
         {
-            return Ok();
+            var jogo = await _jogoService.Obter(idJogo);
+
+            if (jogo == null)
+                return NoContent();
+
+            return Ok(jogo);
         }
 
         [HttpPost]
-        public async Task<ActionResult<object>> InserirJogo( object jogo)
+        public async Task<ActionResult<JogoViewModel>> InserirJogo([FromBody] JogoInputModel jogoInputModel)
         {
-            return Ok();
+            try
+            {
+                var jogo = await _jogoService.Inserir(jogoInputModel);
+
+                return Ok(jogo);
+            }
+            //catch (JogoJaCadastradoException ex)
+            catch (Exception ex)
+            {
+                return UnprocessableEntity("Já existe um jogo com este nome para esta produtora");
+            }
+            
         }
 
         [HttpPut("{idJogo:guid}")] // PUT atualiza o recurso inteiro (nome, preço, etc)
-        public async Task<ActionResult> AtualizarJogo(Guid idJogo, object jogo)
+        public async Task<ActionResult> AtualizarJogo([FromRoute] Guid idJogo,[FromBody] JogoInputModel jogoInputModel)
         {
-            return Ok();
+            try
+            {
+                await _jogoService.Atualizar(idJogo, jogoInputModel);
+
+                return Ok();
+            }
+            //catch (JogoNaoCadastradoException ex)
+            catch (Exception ex)
+            {
+                return NotFound("Este jogo não existe");
+            }
+            
         }
 
         [HttpPatch("{idJogo:guid}/preco/{preco:double}")] // PATCH atualiza um atributo específico (preço)
-        public async Task<ActionResult> AtualizarJogo(Guid idJogo, double preco)
+        public async Task<ActionResult> AtualizarJogo([FromRoute] Guid idJogo,[FromRoute] double preco)
         {
-            return Ok();
+            try
+            {
+                await _jogoService.Atualizar(idJogo, preco);
+
+                return Ok();
+            }
+            //catch (JogoNaoCadastradoException ex)
+            catch (Exception ex)
+            {
+                return NotFound("Este jogo não existe");
+            }
+            
         }
 
         [HttpDelete]
-        public async Task<ActionResult> ApagarJogo(Guid idJogo)
+        public async Task<ActionResult> ApagarJogo([FromRoute] Guid idJogo)
         {
-            return Ok();
+            try
+            {
+                await _jogoService.Remover(idJogo);
+
+                return Ok();
+            }
+            //catch (JogoNaoCadastradoException ex)
+            catch (Exception ex)
+            {
+                return NotFound("Este jogo não existe");
+            }
+            
         }
 
 
